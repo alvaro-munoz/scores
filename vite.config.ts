@@ -53,12 +53,12 @@ export default defineConfig(({ command, isPreview }) => ({
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
         cleanupOutdatedCaches: true,
       },
-      devOptions: {
-        // Lets `npm run dev` register a real service worker too, so PWA
-        // behavior (install prompt, offline) can be checked without a build.
-        enabled: true,
-        type: 'module',
-      },
+      // devOptions.enabled is intentionally left off: it registers a second,
+      // separate service worker under `dev-dist` during `npm run dev`, and
+      // since that folder never contains the app's built assets, workbox
+      // logs a "glob pattern doesn't match any files" warning every time.
+      // Use `npm run build && npm run preview` to test real PWA/offline
+      // behavior against the actual production service worker instead.
     }),
   ],
 }))

@@ -1,10 +1,9 @@
 <script lang="ts">
   import { replace } from 'svelte-spa-router';
-  import { Plus, Crown, FlagTriangleRight, Pencil } from '@lucide/svelte';
+  import { Plus, Crown, FlagTriangleRight, Pencil, Trash2, X } from '@lucide/svelte';
   import { db, computeTotals, addRound, updateRound, deleteRound, finishGame } from '../lib/db';
   import { liveQueryState } from '../lib/liveQuery.svelte';
   import { toaster } from '../lib/toaster';
-  import RoundFormDialog from '../lib/components/RoundFormDialog.svelte';
   import ConfirmDialog from '../lib/components/ConfirmDialog.svelte';
   import type { Round } from '../lib/types';
 
@@ -23,24 +22,75 @@
   const totals = $derived(game.value ? computeTotals(game.value, rounds.value) : []);
   const standings = $derived([...totals].sort((a, b) => a.rank - b.rank));
 
-  let addOpen = $state(false);
+  let draft = $state<Record<string, string>>({});
   let editingRound = $state<Round | null>(null);
   let finishOpen = $state(false);
+  let entryCardEl = $state<HTMLDivElement>();
+  let inputEls: (HTMLInputElement | undefined)[] = [];
 
-  async function handleAddRound(scores: Record<string, number>) {
-    await addRound(gameId, scores);
+  // Seed the draft as soon as the game (and its player list) is available.
+  $effect(() => {
+    if (game.value && Object.keys(draft).length === 0) resetDraft();
+  });
+
+  function resetDraft() {
+    if (!game.value) return;
+    draft = Object.fromEntries(game.value.players.map((p) => [p.id, '']));
   }
 
-  async function handleEditRound(scores: Record<string, number>) {
-    if (!editingRound?.id) return;
-    await updateRound(editingRound.id, scores);
+  function startEdit(round: Round) {
+    if (!game.value) return;
+    editingRound = round;
+    draft = Object.fromEntries(
+      game.value.players.map((p) => [p.id, String(round.scores[p.id] ?? 0)]),
+    );
+    queueMicrotask(() => {
+      entryCardEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      inputEls[0]?.focus();
+      inputEls[0]?.select();
+    });
+  }
+
+  function cancelEdit() {
     editingRound = null;
+    resetDraft();
+  }
+
+  function handleScoreKeydown(e: KeyboardEvent, index: number) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const next = inputEls[index + 1];
+    if (next) {
+      next.focus();
+      next.select();
+    } else {
+      submitRound();
+    }
+  }
+
+  async function submitRound() {
+    if (!game.value) return;
+    const scores: Record<string, number> = {};
+    for (const p of game.value.players) {
+      const raw = draft[p.id] ?? '';
+      const n = Number(raw);
+      scores[p.id] = raw === '' || !Number.isFinite(n) ? 0 : n;
+    }
+    if (editingRound) {
+      await updateRound(editingRound.id!, scores);
+      editingRound = null;
+    } else {
+      await addRound(gameId, scores);
+    }
+    resetDraft();
+    inputEls[0]?.focus();
   }
 
   async function handleDeleteRound() {
     if (!editingRound?.id) return;
     await deleteRound(editingRound.id);
     editingRound = null;
+    resetDraft();
     toaster.success({ title: 'Round deleted' });
   }
 
@@ -53,7 +103,7 @@
 {#if !game.value}
   <p class="py-10 text-center opacity-60">Loading game…</p>
 {:else}
-  <div class="space-y-5 pb-28">
+  <div class="space-y-5 pb-24">
     <header class="space-y-1">
       <h2 class="text-xl font-bold">{game.value.name}</h2>
       <p class="text-sm opacity-60">
@@ -78,20 +128,71 @@
       {/each}
     </div>
 
-    {#if rounds.value.length === 0}
-      <div class="flex flex-col items-center gap-3 py-14 text-center">
-        <p class="max-w-xs text-sm opacity-60">
-          No rounds yet. Add the first round to start tracking scores.
-        </p>
+    <div
+      bind:this={entryCardEl}
+      class="card space-y-3 border p-4 {editingRound
+        ? 'preset-tonal-primary border-primary-500'
+        : 'preset-filled-surface-100-900 border-surface-200-800'}"
+    >
+      <div class="flex items-center justify-between">
+        <h3 class="font-semibold">
+          {editingRound ? `Editing round ${editingRound.index}` : `Round ${rounds.value.length + 1}`}
+        </h3>
+        {#if editingRound}
+          <button
+            type="button"
+            class="btn-icon btn-icon-sm hover:preset-tonal"
+            aria-label="Cancel editing"
+            onclick={cancelEdit}
+          >
+            <X size={16} />
+          </button>
+        {/if}
       </div>
-    {:else}
+
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {#each game.value.players as player, i (player.id)}
+          <label class="block">
+            <span class="mb-1 block truncate text-xs font-medium opacity-60">{player.name}</span>
+            <input
+              type="number"
+              inputmode="numeric"
+              class="input w-full text-center"
+              placeholder="0"
+              bind:value={draft[player.id]}
+              bind:this={inputEls[i]}
+              onkeydown={(e) => handleScoreKeydown(e, i)}
+              onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
+            />
+          </label>
+        {/each}
+      </div>
+
+      <div class="flex gap-2">
+        {#if editingRound}
+          <button type="button" class="btn preset-tonal-error" onclick={handleDeleteRound}>
+            <Trash2 size={16} />
+            Delete
+          </button>
+        {/if}
+        <button type="button" class="btn preset-filled-primary flex-1" onclick={submitRound}>
+          <Plus size={18} />
+          {editingRound ? 'Save round' : 'Add round'}
+        </button>
+      </div>
+    </div>
+
+    {#if rounds.value.length > 0}
       <ol class="space-y-2">
         {#each rounds.value as round (round.id)}
           <li>
             <button
               type="button"
-              class="card preset-filled-surface-100-900 flex w-full flex-wrap items-center gap-x-3 gap-y-1 border border-surface-200-800 p-3 text-left"
-              onclick={() => (editingRound = round)}
+              class="card preset-filled-surface-100-900 flex w-full flex-wrap items-center gap-x-3 gap-y-1 border p-3 text-left {editingRound?.id ===
+              round.id
+                ? 'border-primary-500'
+                : 'border-surface-200-800'}"
+              onclick={() => startEdit(round)}
             >
               <span class="flex w-14 shrink-0 items-center gap-1 text-sm font-semibold opacity-60">
                 <Pencil size={12} /> #{round.index}
@@ -112,36 +213,14 @@
   </div>
 
   <div
-    class="fixed inset-x-0 bottom-0 z-10 mx-auto flex max-w-2xl gap-2 border-t border-surface-200-800 bg-surface-50-950/95 px-4 py-3 backdrop-blur"
+    class="fixed inset-x-0 bottom-0 z-10 mx-auto max-w-2xl border-t border-surface-200-800 bg-surface-50-950/95 px-4 py-3 backdrop-blur"
     style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom));"
   >
-    <button type="button" class="btn preset-tonal flex-1" onclick={() => (finishOpen = true)}>
+    <button type="button" class="btn preset-tonal w-full" onclick={() => (finishOpen = true)}>
       <FlagTriangleRight size={18} />
       Finish game
     </button>
-    <button type="button" class="btn preset-filled-primary flex-[2]" onclick={() => (addOpen = true)}>
-      <Plus size={18} />
-      Add round
-    </button>
   </div>
-
-  <RoundFormDialog
-    open={addOpen}
-    title={`Round ${rounds.value.length + 1}`}
-    players={game.value.players}
-    onOpenChange={(o) => (addOpen = o)}
-    onSave={handleAddRound}
-  />
-
-  <RoundFormDialog
-    open={editingRound !== null}
-    title={`Edit round ${editingRound?.index ?? ''}`}
-    players={game.value.players}
-    initialScores={editingRound?.scores}
-    onOpenChange={(o) => !o && (editingRound = null)}
-    onSave={handleEditRound}
-    extraAction={{ label: 'Delete round', onClick: handleDeleteRound }}
-  />
 
   <ConfirmDialog
     open={finishOpen}

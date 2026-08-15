@@ -23,10 +23,11 @@
     playerNames = playerNames.filter((_, idx) => idx !== i);
   }
 
-  const trimmedNames = $derived(playerNames.map((n) => n.trim()));
-  const canSubmit = $derived(
-    trimmedNames.length >= 2 && trimmedNames.every((n) => n.length > 0),
-  );
+  // A blank field falls back to its own placeholder ("Player 2", etc.) rather
+  // than blocking submission — the placeholder is a usable default, not just
+  // a hint.
+  const trimmedNames = $derived(playerNames.map((n, i) => n.trim() || `Player ${i + 1}`));
+  const canSubmit = $derived(trimmedNames.length >= 2);
 
   async function startGame() {
     if (!canSubmit || submitting) return;

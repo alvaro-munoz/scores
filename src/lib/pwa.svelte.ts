@@ -6,16 +6,12 @@ interface InstallPromptEvent extends Event {
 }
 
 let needRefresh = $state(false);
-let offlineReady = $state(false);
 let installEvent = $state<InstallPromptEvent | null>(null);
 
 const updateServiceWorker = registerSW({
   immediate: true,
   onNeedRefresh() {
     needRefresh = true;
-  },
-  onOfflineReady() {
-    offlineReady = true;
   },
 });
 
@@ -33,14 +29,8 @@ export const pwa = {
   get needRefresh() {
     return needRefresh;
   },
-  get offlineReady() {
-    return offlineReady;
-  },
   get canInstall() {
     return installEvent !== null;
-  },
-  dismissOfflineReady() {
-    offlineReady = false;
   },
   async reload() {
     needRefresh = false;

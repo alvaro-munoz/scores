@@ -28,13 +28,6 @@
       });
     }
   });
-
-  $effect(() => {
-    if (pwa.offlineReady) {
-      toaster.success({ title: 'Ready to work offline', description: 'Scores is installed and cached.' });
-      pwa.dismissOfflineReady();
-    }
-  });
 </script>
 
 <div class="mx-auto flex min-h-svh max-w-2xl flex-col">
