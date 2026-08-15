@@ -43,6 +43,13 @@ Before considering a change done, run `npm run check`, `npm run lint`, and
 lint, format:check, check, test, and build on every push to `main` and every
 PR against it).
 
+## Working conventions
+
+Never run `git commit` or `git push` without telling the user first, even if
+a previous turn in the same session explicitly asked for a commit/push on a
+related change — that permission doesn't carry forward. Say what you're
+about to commit/push and let the user confirm before doing it, not after.
+
 ## Deployment
 
 Push to `main` → GitHub Actions (`.github/workflows/deploy.yml`) lints,
