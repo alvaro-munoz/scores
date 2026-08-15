@@ -63,12 +63,21 @@ export default defineConfig(({ command, isPreview }) => ({
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
         cleanupOutdatedCaches: true,
       },
-      // devOptions.enabled is intentionally left off: it registers a second,
-      // separate service worker under `dev-dist` during `npm run dev`, and
-      // since that folder never contains the app's built assets, workbox
-      // logs a "glob pattern doesn't match any files" warning every time.
-      // Use `npm run build && npm run preview` to test real PWA/offline
-      // behavior against the actual production service worker instead.
+      // devOptions.enabled is on so the dev server actually serves
+      // /manifest.webmanifest — with it off, the <link rel="manifest"> tag
+      // that vite-plugin-pwa still injects in dev points at a URL nothing
+      // handles, so Vite's SPA fallback returns index.html there and
+      // DevTools reports "manifest is not valid JSON data". suppressWarnings
+      // avoids the reason it was off before: without it, the dev-mode
+      // service worker (registered under `dev-dist`, which never contains
+      // the app's built assets) logs a "glob pattern doesn't match any
+      // files" warning on every dev server start.
+      // Real PWA/offline/install behavior still needs the actual production
+      // service worker — use `npm run build && npm run preview` for that.
+      devOptions: {
+        enabled: true,
+        suppressWarnings: true,
+      },
     }),
   ],
 }));

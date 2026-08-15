@@ -128,6 +128,21 @@ server start — the dev-mode SW's `dev-dist/` output has nothing meaningful
 to precache in the first place. Real PWA/offline/install testing now goes
 through `npm run build && npm run preview` instead.
 
+## PWA dev-mode service worker re-enabled, with `suppressWarnings`
+
+The `devOptions.enabled: false` from the entry above had a side effect that
+went unnoticed until dev tools flagged it: `vite-plugin-pwa` injects
+`<link rel="manifest">` into the HTML regardless of `devOptions.enabled`, but
+with it off nothing serves that URL in dev, so Vite's SPA fallback returned
+`index.html` there — DevTools reported "manifest is not valid JSON data" as
+a result. Fixed by turning `devOptions.enabled` back on and adding
+`devOptions.suppressWarnings: true`, which makes the plugin generate the
+dev-mode service worker against a dummy file list instead of the real
+(empty, at dev time) build output — sidestepping the original "glob pattern
+doesn't match any files" warning directly, rather than avoiding it by
+disabling dev-mode serving altogether. `npm run build && npm run preview`
+is still the only way to test against the real production service worker.
+
 ## Removed the "ready to work offline" toast
 
 The user pointed out that a PWA being available offline is the baseline

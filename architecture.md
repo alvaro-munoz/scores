@@ -94,11 +94,17 @@ built asset (index.html references `/scores/...` but the dev-base preview
 server serves from `/`). The GitHub Pages base path (`/scores/`) must match
 the repo name if the repo is ever renamed.
 
-`vite-plugin-pwa`'s `devOptions.enabled` is intentionally left **off** — it
-registers a second service worker under `dev-dist/` that has nothing real to
-precache and logs a spurious "glob pattern doesn't match any files" warning
-on every dev server start. Use `npm run build && npm run preview` to test
-actual PWA/offline/install behavior against the real service worker.
+`vite-plugin-pwa`'s `devOptions.enabled` is **on**, with `suppressWarnings:
+true`. It needs to be on because `vite-plugin-pwa` injects a
+`<link rel="manifest">` tag into the dev HTML regardless of this setting —
+with it off, that URL isn't served, so Vite's SPA fallback returns
+`index.html` there and DevTools reports "manifest is not valid JSON data".
+`suppressWarnings` avoids the reason it was off in the first place: without
+it, the dev-mode service worker (registered under `dev-dist/`, which has
+nothing real to precache) logs a spurious "glob pattern doesn't match any
+files" warning on every dev server start. This dev-mode service worker is
+still not the real one — use `npm run build && npm run preview` to test
+actual PWA/offline/install behavior against the production service worker.
 
 `src/lib/pwa.svelte.ts` wraps `virtual:pwa-register` and the
 `beforeinstallprompt` event in a small rune-based API (`pwa.needRefresh`,
