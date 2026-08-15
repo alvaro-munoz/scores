@@ -123,3 +123,40 @@ devDependency used only by this script — not part of the app build).
   `toLocaleDateString`/`Intl.RelativeTimeFormat` with no explicit locale, so
   it follows the user's system locale — don't hardcode English strings for
   dates/times.
+
+## Testing (`vitest.config.ts`, `src/test/`)
+
+Vitest, with its own config file separate from `vite.config.ts` — that
+file's base-path/PWA-plugin setup exists to serve the real app and isn't
+relevant under test. `*.test.ts` files live next to what they test
+(`src/lib/db.test.ts`, `src/lib/components/GameCard.test.ts`, ...), not in a
+parallel `tests/` tree.
+
+`db.ts` is tested against a **real** Dexie instance backed by
+`fake-indexeddb` (wired up in `src/test/setup.ts`), not a mocked one — that
+includes the `version(1)` → `version(2)` migration, exercised by hand-building
+a legacy v1 database (see `ScoresDB`'s exported class, used to open a second,
+differently-named instance for that one test) and asserting the upgrade
+folds its data correctly. Component tests (`@testing-library/svelte`) render
+against that same real Dexie/fake-indexeddb backend rather than mocking
+`db.ts` — only genuinely external browser integrations get mocked:
+
+- `virtual:pwa-register` (a build-time virtual module from `vite-plugin-pwa`
+  that doesn't exist under Vitest) is aliased to a stub in
+  `src/test/mocks/virtual-pwa-register.ts`.
+- jsdom has no `ResizeObserver`, which Skeleton's Zag-based components (e.g.
+  `SegmentedControl`) call — stubbed in `src/test/setup.ts`.
+
+One easy trap when testing a component whose click handler `await`s a Dexie
+write (e.g. `NewGame`'s submit button, which awaits `createGame`):
+`userEvent.click(...)` resolves once the event has been dispatched, not
+once unrelated async work it triggered has finished. Asserting on a callback
+immediately after the `await userEvent.click(...)` line is a real, genuinely
+intermittent race — wrap that assertion in `waitFor(...)` instead.
+
+Component test coverage is intentionally not exhaustive: `GamePlay.svelte`
+and `Scoreboard.svelte` don't have their own component tests. Their actual
+logic (round CRUD, `computeTotals`) is already covered thoroughly at the
+`db.ts` level; what's left in those two components is largely UI wiring
+around a fairly involved CSS grid, which would cost more in test fragility
+than it would add in regression coverage for now.

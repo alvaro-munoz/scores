@@ -143,3 +143,59 @@ architecture, and decision rationale all in one file. Split into
 (current-state structural reference), and this file (why things are the
 way they are, including reverted attempts), so each stays focused and
 skimmable on its own.
+
+## Added a test suite: Vitest, real Dexie over mocks, deliberately partial component coverage
+
+Chose Vitest over other runners since it's Vite-native and needed no
+separate transform/module pipeline to wire up. `db.ts` — the actual
+business logic (round CRUD, `computeTotals`'s ranking/tie behavior, the
+`version(1)` → `version(2)` migration) — gets exhaustive unit tests, run
+against a real Dexie instance backed by `fake-indexeddb` rather than a
+mocked data layer, so the migration test genuinely exercises Dexie's real
+upgrade machinery instead of asserting against a hand-rolled fake of it.
+`ScoresDB` was exported (previously only the `db` singleton was) purely so
+that migration test could open a second, differently-named instance without
+colliding with the one every other test uses.
+
+Component tests (`@testing-library/svelte`) were added for `GameCard`,
+`ConfirmDialog`, `NewGame`, and `Home` — chosen because each has either
+real conditional logic (GameCard's Created/Updated display, ConfirmDialog's
+controlled-open behavior) or protects a bug that was actually hit and fixed
+earlier in this project (NewGame's placeholder-as-default-name fallback).
+`GamePlay` and `Scoreboard` were deliberately left without their own
+component tests: their real logic is already covered at the `db.ts` level,
+and the remaining surface is UI wiring around a fairly involved CSS grid,
+where component tests would likely be more fragile than valuable right now.
+This isn't a permanent boundary — worth revisiting if `GamePlay` grows more
+of its own logic rather than just calling into `db.ts`.
+
+Two real, non-obvious problems came up getting the component tests green
+and are now handled in `src/test/setup.ts` and `vitest.config.ts` rather
+than worked around per-test:
+
+- jsdom has no `ResizeObserver`, which Skeleton's `SegmentedControl` (used
+  by `NewGame`) calls into via Zag — every component test using it failed
+  until a no-op stub was added.
+- `vite-plugin-pwa`'s `virtual:pwa-register` module doesn't exist outside
+  an actual Vite build with that plugin loaded, so any test rendering a
+  component that imports `src/lib/pwa.svelte.ts` (`Home`, `App`) failed to
+  resolve it — aliased to a stub module instead of pulling the whole PWA
+  plugin into the test config.
+- A genuinely intermittent one: `userEvent.click()` on `NewGame`'s submit
+  button resolves before the component's own `await createGame(...)`
+  finishes, so asserting on the `onCreated` callback immediately after the
+  click was a real race, not a flaky test to shrug off — fixed by wrapping
+  those assertions in `waitFor(...)`.
+
+## Tests wired into CI, gating PRs too
+
+`.github/workflows/deploy.yml` gained a `test` step (`npm run test`)
+alongside the existing lint/format/check/build steps. The workflow was also
+renamed to `CI` and given a `pull_request` trigger (previously it only ran
+on push to `main`), since a check that only runs after merging isn't
+actually gating anything — the `deploy` job stays conditioned on
+`github.event_name == 'push'` so a PR run never publishes unmerged code.
+The concurrency group was changed from a single shared `pages` group to one
+scoped per branch/PR (`${{ github.workflow }}-${{ github.ref }}`), since the
+old shared group would have let an unrelated push cancel a PR's in-progress
+checks.

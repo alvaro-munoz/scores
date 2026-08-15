@@ -1,11 +1,14 @@
 import Dexie, { type Table } from 'dexie';
 import type { Game, Round, Player, PlayerTotal } from './types';
 
-class ScoresDB extends Dexie {
+// Exported (not just the `db` singleton below) so tests can open an
+// isolated, differently-named instance — e.g. to exercise the v1 -> v2
+// upgrade path against a throwaway database instead of the real one.
+export class ScoresDB extends Dexie {
   games!: Table<Game, number>;
 
-  constructor() {
-    super('scores-db');
+  constructor(name = 'scores-db') {
+    super(name);
 
     // v1 had separate `rounds` and `recentPlayers` tables. Rounds are few
     // enough per game (and always loaded/saved as a whole with their game)

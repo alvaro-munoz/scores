@@ -1,7 +1,9 @@
-name: Deploy to GitHub Pages
+name: CI
 
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -10,9 +12,11 @@ permissions:
   pages: write
   id-token: write
 
-# Only one deployment at a time; skip stale runs queued behind a newer push.
+# One run per branch/PR at a time; a new push cancels a stale in-progress
+# run for that same ref rather than piling up (scoped per-ref so a push to
+# main can't cancel an unrelated PR's checks, or vice versa).
 concurrency:
-  group: pages
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -40,6 +44,9 @@ jobs:
       - name: Type-check
         run: npm run check
 
+      - name: Test
+        run: npm run test
+
       - name: Build
         run: npm run build
 
@@ -50,6 +57,9 @@ jobs:
 
   deploy:
     needs: build
+    # Only publish on a real push to main - pull_request runs exist purely
+    # to gate the PR with the checks above, never to deploy unmerged code.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

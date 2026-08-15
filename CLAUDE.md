@@ -26,16 +26,26 @@ npm run lint             # eslint .
 npm run lint:fix         # eslint . --fix
 npm run format           # prettier --write .
 npm run format:check     # prettier --check .
+npm run test             # vitest run — single pass, what CI runs
+npm run test:watch       # vitest — reruns on change
+npm run test:coverage    # vitest run --coverage
 ```
 
-There is no test suite/runner in this project — don't go looking for one.
+To run a single test file or a single test by name:
 
-Before considering a change done, run `npm run check` and `npm run lint`
-(both must be clean; CI in `.github/workflows/deploy.yml` runs lint,
-format:check, check, and build on every push to `main`).
+```bash
+npx vitest run src/lib/db.test.ts
+npx vitest run -t "gives tied totals the same rank"
+```
+
+Before considering a change done, run `npm run check`, `npm run lint`, and
+`npm run test` (all must be clean; CI in `.github/workflows/deploy.yml` runs
+lint, format:check, check, test, and build on every push to `main` and every
+PR against it).
 
 ## Deployment
 
 Push to `main` → GitHub Actions (`.github/workflows/deploy.yml`) lints,
-type-checks, builds, and publishes `dist/` to GitHub Pages. See `README.md`
-for one-time repo setup.
+type-checks, tests, builds, and publishes `dist/` to GitHub Pages. The same
+workflow also runs (without deploying) on PRs against `main`. See
+`README.md` for one-time repo setup.
