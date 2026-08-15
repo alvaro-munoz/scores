@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Plus, Crown, FlagTriangleRight, Pencil, Trash2, X } from '@lucide/svelte';
+  import { Plus, Crown, FlagTriangleRight, Trash2 } from '@lucide/svelte';
   import { db, computeTotals, addRound, updateRound, deleteRound, finishGame } from '../lib/db';
   import { liveQueryState } from '../lib/liveQuery.svelte';
   import { toaster } from '../lib/toaster';
@@ -18,13 +18,19 @@
     [] as Round[],
   );
 
+  const players = $derived(game.value?.players ?? []);
+  // Newest round first, so the always-visible entry row at the top never
+  // needs the round history scrolled out of the way to reach it.
+  const roundsDesc = $derived([...rounds.value].reverse());
+
+  // In player-column order (not sorted by rank) so totals[i] lines up with
+  // players[i] as a table column.
   const totals = $derived(game.value ? computeTotals(game.value, rounds.value) : []);
-  const standings = $derived([...totals].sort((a, b) => a.rank - b.rank));
+  const leader = $derived(totals.find((t) => t.rank === 1));
 
   let draft = $state<Record<string, string>>({});
   let editingRound = $state<Round | null>(null);
   let finishOpen = $state(false);
-  let entryCardEl = $state<HTMLDivElement>();
   let inputEls: (HTMLInputElement | undefined)[] = [];
 
   // Seed the draft as soon as the game (and its player list) is available.
@@ -43,14 +49,9 @@
     draft = Object.fromEntries(
       game.value.players.map((p) => [p.id, String(round.scores[p.id] ?? 0)]),
     );
-    queueMicrotask(() => {
-      entryCardEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      inputEls[0]?.focus();
-      inputEls[0]?.select();
-    });
   }
 
-  function cancelEdit() {
+  function startAdd() {
     editingRound = null;
     resetDraft();
   }
@@ -102,7 +103,7 @@
 {#if !game.value}
   <p class="py-10 text-center opacity-60">Loading game…</p>
 {:else}
-  <div class="space-y-5 pb-24">
+  <div class="space-y-4 pb-24">
     <header class="space-y-1">
       <h2 class="text-xl font-bold">{game.value.name}</h2>
       <p class="text-sm opacity-60">
@@ -111,107 +112,136 @@
       </p>
     </header>
 
-    <div class="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-      {#each standings as t (t.player.id)}
+    <!-- Standings, round history, and score entry all live in one compact
+         grid: player totals up top, an always-editable row for the next
+         round right below, then past rounds — tap one to edit it in place.
+         A CSS grid (not a <table>) is used so the frozen first column keeps
+         its stacking above content scrolling underneath it — sticky <td>s
+         are unreliable about that across browsers. -->
+    <div class="card preset-filled-surface-100-900 border-surface-200-800 overflow-x-auto border">
+      <div
+        class="grid text-sm"
+        style="grid-template-columns: 2.25rem repeat({players.length}, minmax(4rem, 1fr));"
+      >
         <div
-          class="card preset-tonal flex min-w-[7rem] shrink-0 flex-col items-center gap-0.5 px-3 py-2 {t.rank ===
-          1
-            ? 'preset-tonal-warning'
-            : ''}"
-        >
-          <div class="flex items-center gap-1 text-xs font-medium opacity-70">
-            {#if t.rank === 1}<Crown size={14} class="text-warning-500" />{/if}
-            {t.player.name}
-          </div>
-          <div class="text-xl font-bold tabular-nums">{t.total}</div>
-        </div>
-      {/each}
-    </div>
-
-    <div
-      bind:this={entryCardEl}
-      class="card space-y-3 border p-4 {editingRound
-        ? 'preset-tonal-primary border-primary-500'
-        : 'preset-filled-surface-100-900 border-surface-200-800'}"
-    >
-      <div class="flex items-center justify-between">
-        <h3 class="font-semibold">
-          {editingRound
-            ? `Editing round ${editingRound.index}`
-            : `Round ${rounds.value.length + 1}`}
-        </h3>
-        {#if editingRound}
-          <button
-            type="button"
-            class="btn-icon btn-icon-sm hover:preset-tonal"
-            aria-label="Cancel editing"
-            onclick={cancelEdit}
+          class="preset-filled-surface-100-900 border-surface-200-800 sticky left-0 z-10 border-b px-2 py-2"
+        ></div>
+        {#each players as player (player.id)}
+          <div
+            class="border-surface-200-800 truncate border-b px-2 py-2 text-center text-xs font-semibold"
           >
-            <X size={16} />
-          </button>
-        {/if}
-      </div>
-
-      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {#each game.value.players as player, i (player.id)}
-          <label class="block">
-            <span class="mb-1 block truncate text-xs font-medium opacity-60">{player.name}</span>
-            <input
-              type="number"
-              inputmode="numeric"
-              class="input w-full text-center"
-              placeholder="0"
-              bind:value={draft[player.id]}
-              bind:this={inputEls[i]}
-              onkeydown={(e) => handleScoreKeydown(e, i)}
-              onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
-            />
-          </label>
+            {player.name}
+          </div>
         {/each}
-      </div>
 
-      <div class="flex gap-2">
-        {#if editingRound}
-          <button type="button" class="btn preset-tonal-error" onclick={handleDeleteRound}>
-            <Trash2 size={16} />
-            Delete
-          </button>
+        <div
+          class="preset-filled-surface-100-900 border-surface-200-800 sticky left-0 z-10 border-b-2 px-2 py-2 text-xs font-bold opacity-60"
+        >
+          Tot
+        </div>
+        {#each players as player, i (player.id)}
+          {@const t = totals[i]}
+          <div
+            class="border-surface-200-800 border-b-2 px-2 py-2 text-center text-sm font-bold tabular-nums {t?.rank ===
+            1
+              ? 'text-warning-500'
+              : ''}"
+          >
+            {#if t?.rank === 1}<Crown size={12} class="mr-0.5 inline align-text-top" />{/if}
+            {t?.total ?? 0}
+          </div>
+        {/each}
+
+        {#if editingRound === null}
+          <div
+            class="preset-tonal-primary border-surface-200-800 sticky left-0 z-10 flex items-center border-b px-2 py-1.5 text-xs font-semibold"
+          >
+            {rounds.value.length + 1}
+          </div>
+          {#each players as player, i (player.id)}
+            <div class="preset-tonal-primary border-surface-200-800 border-b px-1 py-1">
+              <input
+                type="number"
+                inputmode="numeric"
+                class="input w-full px-1 py-1 text-center text-sm"
+                placeholder="0"
+                bind:value={draft[player.id]}
+                bind:this={inputEls[i]}
+                onkeydown={(e) => handleScoreKeydown(e, i)}
+                onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
+              />
+            </div>
+          {/each}
         {/if}
-        <button type="button" class="btn preset-filled-primary flex-1" onclick={submitRound}>
-          <Plus size={18} />
-          {editingRound ? 'Save round' : 'Add round'}
-        </button>
+
+        {#each roundsDesc as round (round.id)}
+          {#if editingRound?.id === round.id}
+            <div
+              class="preset-tonal-primary border-surface-200-800 sticky left-0 z-10 flex items-center border-b px-2 py-1.5 text-xs font-semibold"
+            >
+              {round.index}
+            </div>
+            {#each players as player, i (player.id)}
+              <div class="preset-tonal-primary border-surface-200-800 border-b px-1 py-1">
+                <input
+                  type="number"
+                  inputmode="numeric"
+                  class="input w-full px-1 py-1 text-center text-sm"
+                  placeholder="0"
+                  bind:value={draft[player.id]}
+                  bind:this={inputEls[i]}
+                  onkeydown={(e) => handleScoreKeydown(e, i)}
+                  onfocus={(e) => (e.currentTarget as HTMLInputElement).select()}
+                />
+              </div>
+            {/each}
+          {:else}
+            <div
+              class="preset-filled-surface-100-900 border-surface-200-800 hover:bg-surface-200-800/30 sticky left-0 z-10 flex items-center border-b px-2 py-1.5 text-xs opacity-60"
+              role="button"
+              tabindex="0"
+              onclick={() => startEdit(round)}
+              onkeydown={(e) => e.key === 'Enter' && startEdit(round)}
+            >
+              {round.index}
+            </div>
+            {#each players as player (player.id)}
+              <div
+                class="border-surface-200-800 hover:bg-surface-200-800/30 border-b px-2 py-1.5 text-center tabular-nums"
+                role="button"
+                tabindex="0"
+                onclick={() => startEdit(round)}
+                onkeydown={(e) => e.key === 'Enter' && startEdit(round)}
+              >
+                {round.scores[player.id] ?? 0}
+              </div>
+            {/each}
+          {/if}
+        {/each}
       </div>
     </div>
 
-    {#if rounds.value.length > 0}
-      <ol class="space-y-2">
-        {#each rounds.value as round (round.id)}
-          <li>
-            <button
-              type="button"
-              class="card preset-filled-surface-100-900 flex w-full flex-wrap items-center gap-x-3 gap-y-1 border p-3 text-left {editingRound?.id ===
-              round.id
-                ? 'border-primary-500'
-                : 'border-surface-200-800'}"
-              onclick={() => startEdit(round)}
-            >
-              <span class="flex w-14 shrink-0 items-center gap-1 text-sm font-semibold opacity-60">
-                <Pencil size={12} /> #{round.index}
-              </span>
-              <span class="flex flex-1 flex-wrap gap-x-3 gap-y-1 text-sm">
-                {#each game.value.players as player (player.id)}
-                  <span class="tabular-nums">
-                    <span class="opacity-60">{player.name}</span>
-                    <span class="font-semibold">{round.scores[player.id] ?? 0}</span>
-                  </span>
-                {/each}
-              </span>
-            </button>
-          </li>
-        {/each}
-      </ol>
-    {/if}
+    <div class="flex items-center gap-2">
+      {#if editingRound}
+        <button
+          type="button"
+          class="btn-icon preset-tonal-error"
+          aria-label="Delete round"
+          onclick={handleDeleteRound}
+        >
+          <Trash2 size={16} />
+        </button>
+        <button type="button" class="btn preset-tonal flex-1" onclick={startAdd}>Cancel</button>
+        <button type="button" class="btn preset-filled-primary flex-1" onclick={submitRound}>
+          Save round
+        </button>
+      {:else}
+        <button type="button" class="btn preset-filled-primary w-full" onclick={submitRound}>
+          <Plus size={18} />
+          Add round
+        </button>
+      {/if}
+    </div>
   </div>
 
   <div
@@ -228,8 +258,8 @@
     open={finishOpen}
     onOpenChange={(o) => (finishOpen = o)}
     title="Finish game?"
-    description={standings[0]
-      ? `${standings[0].player.name} is currently ${game.value.winCondition === 'highest' ? 'leading' : 'in the lead'} with ${standings[0].total} points. You can't add more rounds after finishing.`
+    description={leader
+      ? `${leader.player.name} is currently ${game.value.winCondition === 'highest' ? 'leading' : 'in the lead'} with ${leader.total} points. You can't add more rounds after finishing.`
       : "You can't add more rounds after finishing."}
     confirmLabel="Finish game"
     danger={false}
