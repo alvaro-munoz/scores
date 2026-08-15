@@ -1,48 +1,40 @@
 # Scores
 
-A simple, mobile-first PWA for tracking scores in card games. Add players, log a
-score per round, and finish with a shareable scoreboard — all stored locally on
-your device, no account or server required.
+> 🤖 **This app is vibecoded.** It was built by prompting [Claude
+> Code](https://claude.com/claude-code) — describing what it should do and
+> reviewing the results — rather than by hand-writing the implementation.
 
-- **Svelte 5 + Vite** — the app itself
-- **Dexie** — local storage on top of IndexedDB
-- **Skeleton** — design system (Tailwind CSS v4)
-- **Lucide** — icons
-- **vite-plugin-pwa** — installable, offline-capable PWA
+A simple, mobile-first PWA for tracking scores in card games. Add players,
+log a score per round, and finish with a shareable scoreboard — all stored
+locally on your device, no account or server required.
 
-## How it works
+## What it does
 
-- A game has a fixed set of players and a win condition: most points or fewest
-  points wins.
-- Each round records a score per player; running totals update live.
-- Finishing a game locks it and shows a scoreboard that can be shared as an
-  image (native share sheet on mobile, download elsewhere).
-- Everything is stored on-device with Dexie/IndexedDB — there is no backend.
+- Set up a game with a fixed list of players and a win condition (highest or
+  lowest total wins).
+- Log a score per player each round; running totals and standings update
+  live as you go.
+- Edit or delete any past round — nothing is locked in until you finish the
+  game.
+- Finish a game to lock it and reveal the final scoreboard; reopen it again
+  later if you need to.
+- Share the finished scoreboard as an image, straight from your phone's
+  share sheet (or as a download on desktop).
+- Install it like a native app and keep using it offline — it's a full PWA.
+- Everything lives on your device via IndexedDB. Nothing is sent anywhere.
 
-## Development
+## Built with
 
-```bash
-npm install
-npm run dev
-```
+- [Svelte 5](https://svelte.dev/) + [Vite](https://vitejs.dev/)
+- [Dexie](https://dexie.org/) for local storage on top of IndexedDB
+- [Skeleton](https://www.skeleton.dev/) (Tailwind CSS v4) for the design
+  system
+- [Lucide](https://lucide.dev/) for icons
+- [vite-plugin-pwa](https://vite-pwa-org.netlify.app/) for offline/installable
+  support
 
-Other scripts:
+## Contributing / development
 
-```bash
-npm run build    # production build to dist/
-npm run preview  # serve the production build locally
-npm run check    # type-check (svelte-check + tsc)
-```
-
-## Deployment
-
-Pushing to `main` builds the app and publishes `dist/` to GitHub Pages via the
-workflow in [.github/workflows/deploy.yml](.github/workflows/deploy.yml). The
-first time you set this up on a repo, enable it once in **Settings → Pages →
-Source → GitHub Actions**; after that every push to `main` deploys
-automatically.
-
-The app is built with `base: /scores/` (see `vite.config.ts`), matching this
-repo's name as a GitHub Pages project site
-(`https://<user>.github.io/scores/`). If you rename the repo, update that base
-path to match.
+This is a Claude Code project. See [CLAUDE.md](CLAUDE.md) for setup and
+commands, [architecture.md](architecture.md) for how it's put together, and
+[decisions.md](decisions.md) for why it's built the way it is.

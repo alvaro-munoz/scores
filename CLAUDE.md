@@ -47,5 +47,11 @@ PR against it).
 
 Push to `main` → GitHub Actions (`.github/workflows/deploy.yml`) lints,
 type-checks, tests, builds, and publishes `dist/` to GitHub Pages. The same
-workflow also runs (without deploying) on PRs against `main`. See
-`README.md` for one-time repo setup.
+workflow also runs (without deploying) on PRs against `main`. One-time setup
+on a new repo: enable **Settings → Pages → Source → GitHub Actions**; after
+that every push to `main` deploys automatically.
+
+The app is built with `base: /scores/` (see `vite.config.ts`), matching this
+repo's name as a GitHub Pages project site
+(`https://<user>.github.io/scores/`). If the repo is ever renamed, update
+that base path to match.
