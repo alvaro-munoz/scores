@@ -15,6 +15,7 @@ export interface Game {
   winCondition: WinCondition;
   status: GameStatus;
   createdAt: number;
+  updatedAt: number;
   finishedAt?: number;
 }
 

@@ -2,6 +2,7 @@
   import { Trash2, Users, Crown } from '@lucide/svelte';
   import { db, computeTotals } from '../db';
   import { liveQueryState } from '../liveQuery.svelte';
+  import { formatDate, formatRelative } from '../format';
   import type { Game } from '../types';
 
   interface Props {
@@ -21,10 +22,6 @@
   function open() {
     onOpen(game);
   }
-
-  function formatDate(ts: number) {
-    return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  }
 </script>
 
 <div
@@ -39,10 +36,16 @@
       <h2 class="truncate leading-tight font-semibold">{game.name}</h2>
       <p class="mt-0.5 flex items-center gap-1 text-xs opacity-60">
         <Users size={14} />
-        {game.players.length} players · {formatDate(game.createdAt)}
+        {game.players.length} players
+        {#if game.updatedAt > game.createdAt}
+          · Updated {formatRelative(game.updatedAt)}
+        {/if}
       </p>
     </div>
-    <div class="flex shrink-0 items-center gap-1">
+    <div class="flex shrink-0 items-center gap-2">
+      <span class="text-[11px] whitespace-nowrap opacity-40"
+        >Created {formatDate(game.createdAt)}</span
+      >
       {#if game.status === 'active'}
         <span class="badge preset-tonal-primary">Active</span>
       {:else}
