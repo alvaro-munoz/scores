@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Plus, Trash2, TrendingUp, TrendingDown } from '@lucide/svelte';
   import { SegmentedControl } from '@skeletonlabs/skeleton-svelte';
-  import { createGame, listRecentPlayerNames } from '../lib/db';
+  import { createGame } from '../lib/db';
   import { toaster } from '../lib/toaster';
   import type { WinCondition } from '../lib/types';
 
@@ -13,10 +13,7 @@
   let gameName = $state('');
   let playerNames = $state<string[]>(['', '']);
   let winCondition = $state<WinCondition>('highest');
-  let recentNames = $state<string[]>([]);
   let submitting = $state(false);
-
-  listRecentPlayerNames().then((names) => (recentNames = names));
 
   function addPlayer() {
     playerNames = [...playerNames, ''];
@@ -78,7 +75,6 @@
             type="text"
             class="input"
             placeholder={`Player ${i + 1}`}
-            list="recent-players"
             bind:value={playerNames[i]}
             maxlength="30"
           />
@@ -94,11 +90,6 @@
         </div>
       {/each}
     </div>
-    <datalist id="recent-players">
-      {#each recentNames as name (name)}
-        <option value={name}></option>
-      {/each}
-    </datalist>
     <button type="button" class="btn preset-tonal w-full" onclick={addPlayer}>
       <Plus size={16} />
       Add player

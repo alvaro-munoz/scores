@@ -8,31 +8,23 @@ export interface Player {
   name: string;
 }
 
+export interface Round {
+  /** 1-based round number, in play order. */
+  index: number;
+  /** playerId -> score earned this round */
+  scores: Record<string, number>;
+}
+
 export interface Game {
   id?: number;
   name: string;
   players: Player[];
+  rounds: Round[];
   winCondition: WinCondition;
   status: GameStatus;
   createdAt: number;
   updatedAt: number;
   finishedAt?: number;
-}
-
-export interface Round {
-  id?: number;
-  gameId: number;
-  /** 1-based round number, in play order. */
-  index: number;
-  /** playerId -> score earned this round */
-  scores: Record<string, number>;
-  createdAt: number;
-}
-
-export interface RecentPlayer {
-  name: string;
-  lastUsedAt: number;
-  timesUsed: number;
 }
 
 export interface PlayerTotal {

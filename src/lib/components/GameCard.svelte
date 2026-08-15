@@ -1,7 +1,6 @@
 <script lang="ts">
   import { Trash2, Users, Crown } from '@lucide/svelte';
-  import { db, computeTotals } from '../db';
-  import { liveQueryState } from '../liveQuery.svelte';
+  import { computeTotals } from '../db';
   import { formatDate, formatRelative } from '../format';
   import type { Game } from '../types';
 
@@ -12,11 +11,7 @@
   }
   const { game, onOpen, onRequestDelete }: Props = $props();
 
-  const rounds = liveQueryState(
-    () => db.rounds.where('gameId').equals(game.id!).sortBy('index'),
-    [],
-  );
-  const totals = $derived(computeTotals(game, rounds.value));
+  const totals = $derived(computeTotals(game));
   const leader = $derived([...totals].sort((a, b) => a.rank - b.rank)[0]);
 
   function open() {
@@ -65,7 +60,7 @@
     </div>
   </div>
 
-  {#if rounds.value.length > 0 && leader}
+  {#if game.rounds.length > 0 && leader}
     <div class="flex items-center gap-1.5 text-sm">
       <Crown size={16} class="text-warning-500" />
       <span class="font-medium">{leader.player.name}</span>

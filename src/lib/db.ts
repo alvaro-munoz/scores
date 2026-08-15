@@ -1,18 +1,45 @@
 import Dexie, { type Table } from 'dexie';
-import type { Game, Round, RecentPlayer, Player, PlayerTotal } from './types';
+import type { Game, Round, Player, PlayerTotal } from './types';
 
 class ScoresDB extends Dexie {
   games!: Table<Game, number>;
-  rounds!: Table<Round, number>;
-  recentPlayers!: Table<RecentPlayer, string>;
 
   constructor() {
     super('scores-db');
+
+    // v1 had separate `rounds` and `recentPlayers` tables. Rounds are few
+    // enough per game (and always loaded/saved as a whole with their game)
+    // that a table plus joins was unwarranted complexity, and player-name
+    // autocomplete wasn't worth a whole table either — so v2 folds rounds
+    // into `Game.rounds` and drops `recentPlayers` entirely.
     this.version(1).stores({
       games: '++id, status, createdAt',
       rounds: '++id, gameId, [gameId+index]',
       recentPlayers: 'name, lastUsedAt',
     });
+
+    this.version(2)
+      .stores({
+        games: '++id, status, createdAt',
+        rounds: null,
+        recentPlayers: null,
+      })
+      .upgrade(async (tx) => {
+        const roundsByGame = new Map<number, Round[]>();
+        for (const r of await tx.table('rounds').toArray()) {
+          const list = roundsByGame.get(r.gameId) ?? [];
+          list.push({ index: r.index, scores: r.scores });
+          roundsByGame.set(r.gameId, list);
+        }
+        await tx
+          .table('games')
+          .toCollection()
+          .modify((game) => {
+            const rounds = roundsByGame.get(game.id) ?? [];
+            rounds.sort((a, b) => a.index - b.index);
+            game.rounds = rounds;
+          });
+      });
   }
 }
 
@@ -30,64 +57,51 @@ export async function createGame(
   const players: Player[] = playerNames.map((n) => ({ id: makePlayerId(), name: n.trim() }));
   const now = Date.now();
 
-  const gameId = await db.transaction('rw', db.games, db.recentPlayers, async () => {
-    const id = await db.games.add({
-      name: name.trim() || 'Untitled game',
-      players,
-      winCondition,
-      status: 'active',
-      createdAt: now,
-      updatedAt: now,
+  return db.games.add({
+    name: name.trim() || 'Untitled game',
+    players,
+    rounds: [],
+    winCondition,
+    status: 'active',
+    createdAt: now,
+    updatedAt: now,
+  });
+}
+
+export async function addRound(gameId: number, scores: Record<string, number>): Promise<void> {
+  await db.transaction('rw', db.games, async () => {
+    const game = await db.games.get(gameId);
+    if (!game) return;
+    const index = (game.rounds.at(-1)?.index ?? 0) + 1;
+    await db.games.update(gameId, {
+      rounds: [...game.rounds, { index, scores }],
+      updatedAt: Date.now(),
     });
-
-    for (const p of players) {
-      const existing = await db.recentPlayers.get(p.name);
-      await db.recentPlayers.put({
-        name: p.name,
-        lastUsedAt: now,
-        timesUsed: (existing?.timesUsed ?? 0) + 1,
-      });
-    }
-
-    return id;
-  });
-
-  return gameId as number;
-}
-
-export async function addRound(gameId: number, scores: Record<string, number>): Promise<number> {
-  return db.transaction('rw', db.games, db.rounds, async () => {
-    const lastRound = await db.rounds.where('gameId').equals(gameId).last();
-    const index = (lastRound?.index ?? 0) + 1;
-    const id = await db.rounds.add({
-      gameId,
-      index,
-      scores,
-      createdAt: Date.now(),
-    });
-    await db.games.update(gameId, { updatedAt: Date.now() });
-    return id;
   });
 }
 
-export async function updateRound(roundId: number, scores: Record<string, number>): Promise<void> {
-  await db.transaction('rw', db.games, db.rounds, async () => {
-    const round = await db.rounds.get(roundId);
-    if (!round) return;
-    await db.rounds.update(roundId, { scores });
-    await db.games.update(round.gameId, { updatedAt: Date.now() });
+export async function updateRound(
+  gameId: number,
+  index: number,
+  scores: Record<string, number>,
+): Promise<void> {
+  await db.transaction('rw', db.games, async () => {
+    const game = await db.games.get(gameId);
+    if (!game) return;
+    const rounds = game.rounds.map((r) => (r.index === index ? { ...r, scores } : r));
+    await db.games.update(gameId, { rounds, updatedAt: Date.now() });
   });
 }
 
-export async function deleteRound(roundId: number): Promise<void> {
-  const round = await db.rounds.get(roundId);
-  if (!round) return;
-  await db.transaction('rw', db.games, db.rounds, async () => {
-    await db.rounds.delete(roundId);
+export async function deleteRound(gameId: number, index: number): Promise<void> {
+  await db.transaction('rw', db.games, async () => {
+    const game = await db.games.get(gameId);
+    if (!game) return;
     // Re-number remaining rounds so indices stay contiguous.
-    const remaining = await db.rounds.where('gameId').equals(round.gameId).sortBy('index');
-    await Promise.all(remaining.map((r, i) => db.rounds.update(r.id!, { index: i + 1 })));
-    await db.games.update(round.gameId, { updatedAt: Date.now() });
+    const rounds = game.rounds
+      .filter((r) => r.index !== index)
+      .map((r, i) => ({ ...r, index: i + 1 }));
+    await db.games.update(gameId, { rounds, updatedAt: Date.now() });
   });
 }
 
@@ -105,10 +119,7 @@ export async function reopenGame(gameId: number): Promise<void> {
 }
 
 export async function deleteGame(gameId: number): Promise<void> {
-  await db.transaction('rw', db.games, db.rounds, async () => {
-    await db.rounds.where('gameId').equals(gameId).delete();
-    await db.games.delete(gameId);
-  });
+  await db.games.delete(gameId);
 }
 
 export async function renameGame(gameId: number, name: string): Promise<void> {
@@ -118,16 +129,11 @@ export async function renameGame(gameId: number, name: string): Promise<void> {
   });
 }
 
-export async function listRecentPlayerNames(limit = 20): Promise<string[]> {
-  const all = await db.recentPlayers.orderBy('lastUsedAt').reverse().limit(limit).toArray();
-  return all.map((p) => p.name);
-}
-
 /** Sum each player's scores across rounds, ranked according to the game's win condition. */
-export function computeTotals(game: Game, rounds: Round[]): PlayerTotal[] {
+export function computeTotals(game: Game): PlayerTotal[] {
   const sums = new Map<string, number>();
   for (const p of game.players) sums.set(p.id, 0);
-  for (const round of rounds) {
+  for (const round of game.rounds) {
     for (const [playerId, score] of Object.entries(round.scores)) {
       sums.set(playerId, (sums.get(playerId) ?? 0) + score);
     }

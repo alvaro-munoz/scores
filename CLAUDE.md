@@ -47,22 +47,40 @@ header always goes to `home`, not to "the previous screen".
 
 ### Data layer (`src/lib/db.ts`, `src/lib/types.ts`)
 
-Dexie database `scores-db` with three tables: `games`, `rounds`,
-`recentPlayers` (the last one just powers the player-name autocomplete on the
-new-game form). A `Game` embeds its `players: Player[]` directly (player ids
-are UUIDs scoped to that one game, not shared across games) — there's no
-separate players table.
+Dexie database `scores-db` with a **single** `games` table. A `Game` embeds
+both its `players: Player[]` (player ids are UUIDs scoped to that one game,
+not shared across games) and its `rounds: Round[]` directly — there's no
+separate `rounds` table, no `recentPlayers` table, and no player-name
+autocomplete. This is a deliberate simplification from an earlier version
+that had all three; a game's rounds are always loaded and saved together
+with it anyway, so a separate table just meant joins for no benefit. If
+you're tempted to add a table back for something that's always fetched
+alongside its parent game, embed it instead.
+
+Because embedding required a schema change, the Dexie class declares two
+versions: `version(1)` (the old `games`/`rounds`/`recentPlayers` shape, kept
+so Dexie can still open a browser's existing v1 database) and `version(2)`
+(the current single-table shape), with an `.upgrade()` step on v2 that folds
+each game's rows from the old `rounds` table into `games[i].rounds` before
+dropping the old stores. Keep both versions declared even though the code
+only ever touches the v2 shape — removing `version(1)` would break upgrades
+for anyone still on it. If you change the schema again, add a `version(3)`
+with its own `.upgrade()`; don't edit `version(2)` in place.
+
+Round identity is just its 1-based `index` within the game (no separate
+round id) — `updateRound`/`deleteRound` take `(gameId, index, ...)`, and
+deleting a round re-numbers the rest so indices stay contiguous.
 
 Every mutation in `db.ts` that meaningfully touches a game (add/edit/delete a
 round, finish, reopen, rename) also bumps that game's `updatedAt`. Keep this
 invariant when adding new mutations — `GameCard` and any future
 "last activity" UI depends on it.
 
-`computeTotals(game, rounds)` is the single source of truth for standings: it
-sums each player's scores, ranks them per `game.winCondition`
-(`'highest'` or `'lowest'` wins), handles ties (equal totals share a rank),
-and — importantly — returns results in `game.players` order, not rank order.
-Callers that need a leaderboard sort it themselves
+`computeTotals(game)` is the single source of truth for standings: it sums
+each player's scores across `game.rounds`, ranks them per
+`game.winCondition` (`'highest'` or `'lowest'` wins), handles ties (equal
+totals share a rank), and — importantly — returns results in `game.players`
+order, not rank order. Callers that need a leaderboard sort it themselves
 (`[...totals].sort((a, b) => a.rank - b.rank)`); callers that need a stable
 column order (the `GamePlay` grid) rely on the original order.
 
@@ -71,8 +89,11 @@ column order (the `GamePlay` grid) rely on the original order.
 `liveQueryState(querierFn, initial)` wraps a Dexie `liveQuery` in a Svelte 5
 rune so components can read `.value` reactively without manual
 subscribe/unsubscribe. It must be called during component initialization,
-like any other rune. This is how every screen/component stays live-updated
-against IndexedDB (no manual refetching anywhere).
+like any other rune. Screens query `db.games` this way (`Home` for the list,
+`GamePlay`/`Scoreboard` for a single game via `db.games.get(gameId)`) and
+then just read `game.value.rounds`/`game.value.players` off the result —
+since rounds are embedded, nothing needs its own separate live query for
+them.
 
 ### GamePlay's merged scoreboard grid
 

@@ -5,7 +5,6 @@
   import { liveQueryState } from '../lib/liveQuery.svelte';
   import { toaster } from '../lib/toaster';
   import ConfirmDialog from '../lib/components/ConfirmDialog.svelte';
-  import type { Round } from '../lib/types';
 
   interface Props {
     gameId: number;
@@ -16,13 +15,10 @@
   const { gameId, onReopen, onNewGame, onHome }: Props = $props();
 
   const game = liveQueryState(() => db.games.get(gameId), undefined);
-  const rounds = liveQueryState(
-    () => db.rounds.where('gameId').equals(gameId).sortBy('index'),
-    [] as Round[],
-  );
+  const rounds = $derived(game.value?.rounds ?? []);
 
   const standings = $derived(
-    game.value ? [...computeTotals(game.value, rounds.value)].sort((a, b) => a.rank - b.rank) : [],
+    game.value ? [...computeTotals(game.value)].sort((a, b) => a.rank - b.rank) : [],
   );
   const winner = $derived(standings[0]);
 
@@ -135,7 +131,7 @@
       </ol>
 
       <p class="text-center text-xs opacity-40">
-        {rounds.value.length} round{rounds.value.length === 1 ? '' : 's'} ·
+        {rounds.length} round{rounds.length === 1 ? '' : 's'} ·
         {game.value.winCondition === 'highest' ? 'most points wins' : 'fewest points wins'} · Scores
       </p>
     </div>

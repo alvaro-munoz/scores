@@ -13,19 +13,16 @@
   const { gameId, onFinish }: Props = $props();
 
   const game = liveQueryState(() => db.games.get(gameId), undefined);
-  const rounds = liveQueryState(
-    () => db.rounds.where('gameId').equals(gameId).sortBy('index'),
-    [] as Round[],
-  );
 
   const players = $derived(game.value?.players ?? []);
+  const rounds = $derived(game.value?.rounds ?? []);
   // Newest round first, so the always-visible entry row at the top never
   // needs the round history scrolled out of the way to reach it.
-  const roundsDesc = $derived([...rounds.value].reverse());
+  const roundsDesc = $derived([...rounds].reverse());
 
   // In player-column order (not sorted by rank) so totals[i] lines up with
   // players[i] as a table column.
-  const totals = $derived(game.value ? computeTotals(game.value, rounds.value) : []);
+  const totals = $derived(game.value ? computeTotals(game.value) : []);
   const leader = $derived(totals.find((t) => t.rank === 1));
 
   let draft = $state<Record<string, string>>({});
@@ -77,7 +74,7 @@
       scores[p.id] = raw === '' || !Number.isFinite(n) ? 0 : n;
     }
     if (editingRound) {
-      await updateRound(editingRound.id!, scores);
+      await updateRound(gameId, editingRound.index, scores);
       editingRound = null;
     } else {
       await addRound(gameId, scores);
@@ -87,8 +84,8 @@
   }
 
   async function handleDeleteRound() {
-    if (!editingRound?.id) return;
-    await deleteRound(editingRound.id);
+    if (!editingRound) return;
+    await deleteRound(gameId, editingRound.index);
     editingRound = null;
     resetDraft();
     toaster.success({ title: 'Round deleted' });
@@ -108,7 +105,7 @@
       <h2 class="text-xl font-bold">{game.value.name}</h2>
       <p class="text-sm opacity-60">
         {game.value.winCondition === 'highest' ? 'Most points wins' : 'Fewest points wins'} ·
-        {rounds.value.length} round{rounds.value.length === 1 ? '' : 's'}
+        {rounds.length} round{rounds.length === 1 ? '' : 's'}
       </p>
     </header>
 
@@ -156,7 +153,7 @@
           <div
             class="preset-tonal-primary border-surface-200-800 sticky left-0 z-10 flex items-center border-b px-2 py-1.5 text-xs font-semibold"
           >
-            {rounds.value.length + 1}
+            {rounds.length + 1}
           </div>
           {#each players as player, i (player.id)}
             <div class="preset-tonal-primary border-surface-200-800 border-b px-1 py-1">
@@ -174,8 +171,8 @@
           {/each}
         {/if}
 
-        {#each roundsDesc as round (round.id)}
-          {#if editingRound?.id === round.id}
+        {#each roundsDesc as round (round.index)}
+          {#if editingRound?.index === round.index}
             <div
               class="preset-tonal-primary border-surface-200-800 sticky left-0 z-10 flex items-center border-b px-2 py-1.5 text-xs font-semibold"
             >
