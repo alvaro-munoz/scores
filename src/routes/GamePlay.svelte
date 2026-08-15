@@ -115,7 +115,8 @@
     <div class="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
       {#each standings as t (t.player.id)}
         <div
-          class="card preset-tonal flex min-w-[7rem] shrink-0 flex-col items-center gap-0.5 px-3 py-2 {t.rank === 1
+          class="card preset-tonal flex min-w-[7rem] shrink-0 flex-col items-center gap-0.5 px-3 py-2 {t.rank ===
+          1
             ? 'preset-tonal-warning'
             : ''}"
         >
@@ -136,7 +137,9 @@
     >
       <div class="flex items-center justify-between">
         <h3 class="font-semibold">
-          {editingRound ? `Editing round ${editingRound.index}` : `Round ${rounds.value.length + 1}`}
+          {editingRound
+            ? `Editing round ${editingRound.index}`
+            : `Round ${rounds.value.length + 1}`}
         </h3>
         {#if editingRound}
           <button
@@ -213,7 +216,7 @@
   </div>
 
   <div
-    class="fixed inset-x-0 bottom-0 z-10 mx-auto max-w-2xl border-t border-surface-200-800 bg-surface-50-950/95 px-4 py-3 backdrop-blur"
+    class="border-surface-200-800 bg-surface-50-950/95 fixed inset-x-0 bottom-0 z-10 mx-auto max-w-2xl border-t px-4 py-3 backdrop-blur"
     style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom));"
   >
     <button type="button" class="btn preset-tonal w-full" onclick={() => (finishOpen = true)}>

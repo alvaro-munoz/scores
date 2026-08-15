@@ -32,7 +32,7 @@
 
 <div class="mx-auto flex min-h-svh max-w-2xl flex-col">
   <header
-    class="sticky top-0 z-10 flex items-center gap-2 border-b border-surface-200-800 bg-surface-50-950/90 px-4 py-3 backdrop-blur"
+    class="border-surface-200-800 bg-surface-50-950/90 sticky top-0 z-10 flex items-center gap-2 border-b px-4 py-3 backdrop-blur"
     style="padding-top: max(0.75rem, env(safe-area-inset-top));"
   >
     {#if !isHome}
@@ -65,7 +65,9 @@
         {/if}
       </Toast.Message>
       {#if toast.action}
-        <Toast.ActionTrigger class="btn btn-sm preset-tonal">{toast.action.label}</Toast.ActionTrigger>
+        <Toast.ActionTrigger class="btn btn-sm preset-tonal"
+          >{toast.action.label}</Toast.ActionTrigger
+        >
       {/if}
       <Toast.CloseTrigger />
     </Toast>

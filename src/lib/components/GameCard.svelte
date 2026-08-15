@@ -28,7 +28,7 @@
 </script>
 
 <div
-  class="card preset-filled-surface-100-900 space-y-3 border border-surface-200-800 p-4 text-left transition active:scale-[0.99]"
+  class="card preset-filled-surface-100-900 border-surface-200-800 space-y-3 border p-4 text-left transition active:scale-[0.99]"
   role="button"
   tabindex="0"
   onclick={open}
@@ -36,7 +36,7 @@
 >
   <div class="flex items-start justify-between gap-2">
     <div class="min-w-0">
-      <h2 class="truncate font-semibold leading-tight">{game.name}</h2>
+      <h2 class="truncate leading-tight font-semibold">{game.name}</h2>
       <p class="mt-0.5 flex items-center gap-1 text-xs opacity-60">
         <Users size={14} />
         {game.players.length} players · {formatDate(game.createdAt)}

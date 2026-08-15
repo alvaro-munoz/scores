@@ -18,6 +18,10 @@ dev-dist
 .env.*
 !.env.example
 
+# Tooling caches
+.eslintcache
+.prettiercache
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

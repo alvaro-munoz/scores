@@ -66,7 +66,7 @@
   {:else}
     {#if active.length > 0}
       <section class="space-y-2">
-        <h2 class="text-sm font-semibold uppercase tracking-wide opacity-60">Active games</h2>
+        <h2 class="text-sm font-semibold tracking-wide uppercase opacity-60">Active games</h2>
         <div class="space-y-2">
           {#each active as game (game.id)}
             <GameCard {game} onRequestDelete={(g) => (gameToDelete = g)} />
@@ -77,7 +77,7 @@
 
     {#if finished.length > 0}
       <section class="space-y-2">
-        <h2 class="text-sm font-semibold uppercase tracking-wide opacity-60">Finished games</h2>
+        <h2 class="text-sm font-semibold tracking-wide uppercase opacity-60">Finished games</h2>
         <div class="space-y-2">
           {#each finished as game (game.id)}
             <GameCard {game} onRequestDelete={(g) => (gameToDelete = g)} />

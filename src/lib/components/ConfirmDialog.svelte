@@ -12,8 +12,15 @@
     onOpenChange: (open: boolean) => void;
   }
 
-  let { open, title, description, confirmLabel = 'Confirm', danger = true, onConfirm, onOpenChange }: Props =
-    $props();
+  let {
+    open,
+    title,
+    description,
+    confirmLabel = 'Confirm',
+    danger = true,
+    onConfirm,
+    onOpenChange,
+  }: Props = $props();
 
   function confirm() {
     onConfirm();
@@ -23,9 +30,9 @@
 
 <Dialog {open} onOpenChange={(d) => onOpenChange(d.open)} closeOnInteractOutside={false}>
   <Portal>
-    <Dialog.Backdrop class="fixed inset-0 z-50 bg-surface-50-950/60" />
+    <Dialog.Backdrop class="bg-surface-50-950/60 fixed inset-0 z-50" />
     <Dialog.Positioner class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <Dialog.Content class="card w-full max-w-sm space-y-4 bg-surface-100-900 p-5 shadow-xl">
+      <Dialog.Content class="card bg-surface-100-900 w-full max-w-sm space-y-4 p-5 shadow-xl">
         <header class="flex items-center justify-between">
           <Dialog.Title class="text-lg font-bold">{title}</Dialog.Title>
           <Dialog.CloseTrigger class="btn-icon btn-icon-sm hover:preset-tonal" aria-label="Close">

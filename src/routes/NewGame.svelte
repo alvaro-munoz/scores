@@ -33,11 +33,7 @@
     if (!canSubmit || submitting) return;
     submitting = true;
     try {
-      const id = await createGame(
-        gameName || defaultGameName(),
-        trimmedNames,
-        winCondition,
-      );
+      const id = await createGame(gameName || defaultGameName(), trimmedNames, winCondition);
       replace(`/game/${id}`);
     } catch (err) {
       console.error(err);
@@ -51,7 +47,13 @@
   }
 </script>
 
-<form class="space-y-6 pb-6" onsubmit={(e) => { e.preventDefault(); startGame(); }}>
+<form
+  class="space-y-6 pb-6"
+  onsubmit={(e) => {
+    e.preventDefault();
+    startGame();
+  }}
+>
   <label class="label">
     <span class="label-text text-sm font-medium">Game name</span>
     <input
@@ -123,7 +125,11 @@
     </SegmentedControl>
   </div>
 
-  <button type="submit" class="btn preset-filled-primary w-full" disabled={!canSubmit || submitting}>
+  <button
+    type="submit"
+    class="btn preset-filled-primary w-full"
+    disabled={!canSubmit || submitting}
+  >
     Start game
   </button>
 </form>

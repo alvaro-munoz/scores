@@ -25,7 +25,7 @@
   );
   const winner = $derived(standings[0]);
 
-  const confettiPieces = Array.from({ length: 28 }, (_, i) => ({
+  const confettiPieces = Array.from({ length: 28 }, () => ({
     left: Math.random() * 100,
     delay: Math.random() * 0.6,
     duration: 2.2 + Math.random() * 1.4,
@@ -50,7 +50,9 @@
     try {
       const dataUrl = await toPng(cardEl, { pixelRatio: 2, cacheBust: true });
       const blob = await (await fetch(dataUrl)).blob();
-      const file = new File([blob], `${game.value?.name ?? 'scoreboard'}.png`, { type: 'image/png' });
+      const file = new File([blob], `${game.value?.name ?? 'scoreboard'}.png`, {
+        type: 'image/png',
+      });
 
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({
@@ -63,7 +65,10 @@
         link.href = dataUrl;
         link.download = `${game.value?.name ?? 'scoreboard'}.png`;
         link.click();
-        toaster.info({ title: 'Image saved', description: 'Sharing is not supported on this device.' });
+        toaster.info({
+          title: 'Image saved',
+          description: 'Sharing is not supported on this device.',
+        });
       }
     } catch (err) {
       if ((err as Error)?.name !== 'AbortError') {
@@ -95,10 +100,13 @@
       {/each}
     </div>
 
-    <div bind:this={cardEl} class="card preset-filled-surface-100-900 relative z-[1] space-y-5 border border-surface-200-800 p-5">
+    <div
+      bind:this={cardEl}
+      class="card preset-filled-surface-100-900 border-surface-200-800 relative z-[1] space-y-5 border p-5"
+    >
       <div class="flex flex-col items-center gap-2 py-4 text-center">
         <Trophy size={48} class="text-warning-500 drop-shadow" />
-        <p class="text-sm font-medium uppercase tracking-wide opacity-60">{game.value.name}</p>
+        <p class="text-sm font-medium tracking-wide uppercase opacity-60">{game.value.name}</p>
         {#if winner}
           <h2 class="text-2xl font-extrabold">{winner.player.name} wins!</h2>
           <p class="text-lg font-semibold opacity-80">{winner.total} points</p>
@@ -108,7 +116,7 @@
       <ol class="space-y-2">
         {#each standings as t (t.player.id)}
           <li
-            class="flex items-center gap-3 rounded-container px-3 py-2.5 {t.rank === 1
+            class="rounded-container flex items-center gap-3 px-3 py-2.5 {t.rank === 1
               ? 'preset-tonal-warning'
               : 'preset-tonal'}"
           >

@@ -39,15 +39,17 @@ const targets = [
 
 for (const t of targets) {
   const buf = Buffer.from(svg(t.size, { padding: t.padding }));
-  await sharp(buf).png().toFile(fileURLToPath(new URL(t.name, outDir)));
+  await sharp(buf)
+    .png()
+    .toFile(fileURLToPath(new URL(t.name, outDir)));
   console.log('wrote', t.name);
 }
 
 // Favicon (transparent background, no rounded rect, browser chrome provides that)
 const faviconSvg = svg(64, { withBackground: true, padding: 8 });
 writeFileSync(fileURLToPath(new URL('../public/favicon.svg', import.meta.url)), faviconSvg);
-await sharp(Buffer.from(svg(48, { padding: 6 }))).png().toFile(
-  fileURLToPath(new URL('../public/favicon.png', import.meta.url)),
-);
+await sharp(Buffer.from(svg(48, { padding: 6 })))
+  .png()
+  .toFile(fileURLToPath(new URL('../public/favicon.png', import.meta.url)));
 
 console.log('done');
