@@ -4,7 +4,6 @@
   import { db, computeTotals, reopenGame } from '../lib/db';
   import { liveQueryState } from '../lib/liveQuery.svelte';
   import { toaster } from '../lib/toaster';
-  import ConfirmDialog from '../lib/components/ConfirmDialog.svelte';
 
   interface Props {
     gameId: number;
@@ -32,7 +31,6 @@
 
   let cardEl = $state<HTMLDivElement | undefined>();
   let sharing = $state(false);
-  let reopenOpen = $state(false);
 
   function medalClass(rank: number) {
     if (rank === 1) return 'text-warning-500';
@@ -147,7 +145,7 @@
         {sharing ? 'Preparing…' : 'Share scoreboard'}
       </button>
       <div class="flex gap-2">
-        <button type="button" class="btn preset-tonal flex-1" onclick={() => (reopenOpen = true)}>
+        <button type="button" class="btn preset-tonal flex-1" onclick={handleReopen}>
           <RotateCcw size={16} />
           Reopen
         </button>
@@ -162,16 +160,6 @@
       </div>
     </div>
   </div>
-
-  <ConfirmDialog
-    open={reopenOpen}
-    onOpenChange={(o) => (reopenOpen = o)}
-    title="Reopen game?"
-    description="You'll be able to add more rounds. The game will move back to your active games."
-    confirmLabel="Reopen"
-    danger={false}
-    onConfirm={handleReopen}
-  />
 {/if}
 
 <style>

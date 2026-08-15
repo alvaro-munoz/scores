@@ -138,12 +138,14 @@ devDependency used only by this script — not part of the app build).
 
 ### Skeleton/Tailwind gotchas
 
-- Skeleton `Dialog` usages here (`ConfirmDialog`, used for delete/finish/reopen
-  confirmations) are controlled from outside with no `Dialog.Trigger`, so they
-  set `closeOnInteractOutside={false}`. Without it, the same click that flips
-  `open` to `true` gets treated as an "outside click" by Zag's dismissable
-  layer and immediately closes the dialog again. Apply the same fix to any
-  new dialog opened the same way (a plain button setting `open = true`).
+- Skeleton `Dialog` usages here (`ConfirmDialog`, used only for deleting a
+  game — finishing and reopening are one tap, no confirmation, since both are
+  easily reversible) are controlled from outside with no `Dialog.Trigger`, so
+  they set `closeOnInteractOutside={false}`. Without it, the same click that
+  flips `open` to `true` gets treated as an "outside click" by Zag's
+  dismissable layer and immediately closes the dialog again. Apply the same
+  fix to any new dialog opened the same way (a plain button setting
+  `open = true`).
 - The toast region (`src/lib/toaster.ts`) sets explicit `offsets.top` so
   toasts clear the sticky app header instead of overlapping it.
 - Date/relative-time formatting (`src/lib/format.ts`) uses

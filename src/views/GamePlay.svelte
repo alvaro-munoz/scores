@@ -3,7 +3,6 @@
   import { db, computeTotals, addRound, updateRound, deleteRound, finishGame } from '../lib/db';
   import { liveQueryState } from '../lib/liveQuery.svelte';
   import { toaster } from '../lib/toaster';
-  import ConfirmDialog from '../lib/components/ConfirmDialog.svelte';
   import type { Round } from '../lib/types';
 
   interface Props {
@@ -23,11 +22,9 @@
   // In player-column order (not sorted by rank) so totals[i] lines up with
   // players[i] as a table column.
   const totals = $derived(game.value ? computeTotals(game.value) : []);
-  const leader = $derived(totals.find((t) => t.rank === 1));
 
   let draft = $state<Record<string, string>>({});
   let editingRound = $state<Round | null>(null);
-  let finishOpen = $state(false);
   let inputEls: (HTMLInputElement | undefined)[] = [];
 
   // Seed the draft as soon as the game (and its player list) is available.
@@ -245,21 +242,9 @@
     class="border-surface-200-800 bg-surface-50-950/95 fixed inset-x-0 bottom-0 z-10 mx-auto max-w-2xl border-t px-4 py-3 backdrop-blur"
     style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom));"
   >
-    <button type="button" class="btn preset-tonal w-full" onclick={() => (finishOpen = true)}>
+    <button type="button" class="btn preset-tonal w-full" onclick={handleFinish}>
       <FlagTriangleRight size={18} />
       Finish game
     </button>
   </div>
-
-  <ConfirmDialog
-    open={finishOpen}
-    onOpenChange={(o) => (finishOpen = o)}
-    title="Finish game?"
-    description={leader
-      ? `${leader.player.name} is currently ${game.value.winCondition === 'highest' ? 'leading' : 'in the lead'} with ${leader.total} points. You can't add more rounds after finishing.`
-      : "You can't add more rounds after finishing."}
-    confirmLabel="Finish game"
-    danger={false}
-    onConfirm={handleFinish}
-  />
 {/if}
