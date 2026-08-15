@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { replace } from 'svelte-spa-router';
   import { Plus, Crown, FlagTriangleRight, Pencil, Trash2, X } from '@lucide/svelte';
   import { db, computeTotals, addRound, updateRound, deleteRound, finishGame } from '../lib/db';
   import { liveQueryState } from '../lib/liveQuery.svelte';
@@ -8,10 +7,10 @@
   import type { Round } from '../lib/types';
 
   interface Props {
-    params: { id: string };
+    gameId: number;
+    onFinish: (gameId: number) => void;
   }
-  const { params }: Props = $props();
-  const gameId = $derived(Number(params.id));
+  const { gameId, onFinish }: Props = $props();
 
   const game = liveQueryState(() => db.games.get(gameId), undefined);
   const rounds = liveQueryState(
@@ -96,7 +95,7 @@
 
   async function handleFinish() {
     await finishGame(gameId);
-    replace(`/game/${gameId}/summary`);
+    onFinish(gameId);
   }
 </script>
 

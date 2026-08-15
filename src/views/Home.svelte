@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { push } from 'svelte-spa-router';
   import { Plus, Spade, Download, X } from '@lucide/svelte';
   import { db, deleteGame } from '../lib/db';
   import { liveQueryState } from '../lib/liveQuery.svelte';
@@ -8,6 +7,13 @@
   import GameCard from '../lib/components/GameCard.svelte';
   import ConfirmDialog from '../lib/components/ConfirmDialog.svelte';
   import type { Game } from '../lib/types';
+
+  interface Props {
+    onNewGame: () => void;
+    onOpenGame: (gameId: number) => void;
+    onOpenSummary: (gameId: number) => void;
+  }
+  const { onNewGame, onOpenGame, onOpenSummary }: Props = $props();
 
   let installBannerDismissed = $state(false);
 
@@ -20,6 +26,12 @@
   const finished = $derived(games.value.filter((g) => g.status === 'finished'));
 
   let gameToDelete = $state<Game | null>(null);
+
+  function openGame(game: Game) {
+    if (!game.id) return;
+    if (game.status === 'finished') onOpenSummary(game.id);
+    else onOpenGame(game.id);
+  }
 
   async function confirmDelete() {
     const game = gameToDelete;
@@ -58,7 +70,7 @@
       <p class="max-w-xs text-sm opacity-60">
         Start a new game to track scores round by round with your friends.
       </p>
-      <button type="button" class="btn preset-filled-primary mt-2" onclick={() => push('/new')}>
+      <button type="button" class="btn preset-filled-primary mt-2" onclick={onNewGame}>
         <Plus size={18} />
         New game
       </button>
@@ -69,7 +81,7 @@
         <h2 class="text-sm font-semibold tracking-wide uppercase opacity-60">Active games</h2>
         <div class="space-y-2">
           {#each active as game (game.id)}
-            <GameCard {game} onRequestDelete={(g) => (gameToDelete = g)} />
+            <GameCard {game} onOpen={openGame} onRequestDelete={(g) => (gameToDelete = g)} />
           {/each}
         </div>
       </section>
@@ -80,7 +92,7 @@
         <h2 class="text-sm font-semibold tracking-wide uppercase opacity-60">Finished games</h2>
         <div class="space-y-2">
           {#each finished as game (game.id)}
-            <GameCard {game} onRequestDelete={(g) => (gameToDelete = g)} />
+            <GameCard {game} onOpen={openGame} onRequestDelete={(g) => (gameToDelete = g)} />
           {/each}
         </div>
       </section>
@@ -94,7 +106,7 @@
     class="btn-icon preset-filled-primary fixed right-5 bottom-5 z-20 size-14 rounded-full shadow-xl"
     style="bottom: max(1.25rem, calc(env(safe-area-inset-bottom) + 1rem));"
     aria-label="New game"
-    onclick={() => push('/new')}
+    onclick={onNewGame}
   >
     <Plus size={24} />
   </button>

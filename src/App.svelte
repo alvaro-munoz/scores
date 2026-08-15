@@ -1,22 +1,38 @@
 <script lang="ts">
-  import Router, { push, router } from 'svelte-spa-router';
   import { ArrowLeft, Spade } from '@lucide/svelte';
   import { Toast } from '@skeletonlabs/skeleton-svelte';
   import { toaster } from './lib/toaster';
   import { pwa } from './lib/pwa.svelte';
-  import Home from './routes/Home.svelte';
-  import NewGame from './routes/NewGame.svelte';
-  import GamePlay from './routes/GamePlay.svelte';
-  import Scoreboard from './routes/Scoreboard.svelte';
+  import Home from './views/Home.svelte';
+  import NewGame from './views/NewGame.svelte';
+  import GamePlay from './views/GamePlay.svelte';
+  import Scoreboard from './views/Scoreboard.svelte';
 
-  const routes = {
-    '/': Home,
-    '/new': NewGame,
-    '/game/:id': GamePlay,
-    '/game/:id/summary': Scoreboard,
-  };
+  // The app is small enough that a single view-state variable is simpler
+  // than a router: no URLs to keep in sync, no route-matching, just "what's
+  // on screen right now".
+  type View =
+    | { name: 'home' }
+    | { name: 'new' }
+    | { name: 'game'; gameId: number }
+    | { name: 'summary'; gameId: number };
 
-  const isHome = $derived(router.location === '/');
+  let view = $state<View>({ name: 'home' });
+
+  const isHome = $derived(view.name === 'home');
+
+  function goHome() {
+    view = { name: 'home' };
+  }
+  function goNew() {
+    view = { name: 'new' };
+  }
+  function goGame(gameId: number) {
+    view = { name: 'game', gameId };
+  }
+  function goSummary(gameId: number) {
+    view = { name: 'summary', gameId };
+  }
 
   $effect(() => {
     if (pwa.needRefresh) {
@@ -40,7 +56,7 @@
         type="button"
         class="btn-icon preset-tonal"
         aria-label="Back to games"
-        onclick={() => push('/')}
+        onclick={goHome}
       >
         <ArrowLeft size={20} />
       </button>
@@ -51,7 +67,15 @@
   </header>
 
   <main class="flex-1 px-4 py-4" style="padding-bottom: max(1rem, env(safe-area-inset-bottom));">
-    <Router {routes} />
+    {#if view.name === 'home'}
+      <Home onNewGame={goNew} onOpenGame={goGame} onOpenSummary={goSummary} />
+    {:else if view.name === 'new'}
+      <NewGame onCreated={goGame} />
+    {:else if view.name === 'game'}
+      <GamePlay gameId={view.gameId} onFinish={goSummary} />
+    {:else if view.name === 'summary'}
+      <Scoreboard gameId={view.gameId} onReopen={goGame} onNewGame={goNew} onHome={goHome} />
+    {/if}
   </main>
 </div>
 

@@ -41,7 +41,6 @@
     "@skeletonlabs/skeleton": "^5.0.0",
     "@skeletonlabs/skeleton-svelte": "^5.0.0",
     "dexie": "^4.4.5",
-    "html-to-image": "^1.11.13",
-    "svelte-spa-router": "^5.1.1"
+    "html-to-image": "^1.11.13"
   }
 }

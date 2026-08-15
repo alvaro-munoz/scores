@@ -1,10 +1,14 @@
 <script lang="ts">
-  import { replace } from 'svelte-spa-router';
   import { Plus, Trash2, TrendingUp, TrendingDown } from '@lucide/svelte';
   import { SegmentedControl } from '@skeletonlabs/skeleton-svelte';
   import { createGame, listRecentPlayerNames } from '../lib/db';
   import { toaster } from '../lib/toaster';
   import type { WinCondition } from '../lib/types';
+
+  interface Props {
+    onCreated: (gameId: number) => void;
+  }
+  const { onCreated }: Props = $props();
 
   let gameName = $state('');
   let playerNames = $state<string[]>(['', '']);
@@ -34,7 +38,7 @@
     submitting = true;
     try {
       const id = await createGame(gameName || defaultGameName(), trimmedNames, winCondition);
-      replace(`/game/${id}`);
+      onCreated(id);
     } catch (err) {
       console.error(err);
       toaster.error({ title: 'Could not create game' });

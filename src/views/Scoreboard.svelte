@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { push } from 'svelte-spa-router';
   import { Trophy, Medal, Share2, Plus, RotateCcw, Home } from '@lucide/svelte';
   import { toPng } from 'html-to-image';
   import { db, computeTotals, reopenGame } from '../lib/db';
@@ -9,10 +8,12 @@
   import type { Round } from '../lib/types';
 
   interface Props {
-    params: { id: string };
+    gameId: number;
+    onReopen: (gameId: number) => void;
+    onNewGame: () => void;
+    onHome: () => void;
   }
-  const { params }: Props = $props();
-  const gameId = $derived(Number(params.id));
+  const { gameId, onReopen, onNewGame, onHome }: Props = $props();
 
   const game = liveQueryState(() => db.games.get(gameId), undefined);
   const rounds = liveQueryState(
@@ -83,7 +84,7 @@
   async function handleReopen() {
     if (!gameId) return;
     await reopenGame(gameId);
-    push(`/game/${gameId}`);
+    onReopen(gameId);
   }
 </script>
 
@@ -154,11 +155,11 @@
           <RotateCcw size={16} />
           Reopen
         </button>
-        <button type="button" class="btn preset-tonal flex-1" onclick={() => push('/new')}>
+        <button type="button" class="btn preset-tonal flex-1" onclick={onNewGame}>
           <Plus size={16} />
           New game
         </button>
-        <button type="button" class="btn preset-tonal flex-1" onclick={() => push('/')}>
+        <button type="button" class="btn preset-tonal flex-1" onclick={onHome}>
           <Home size={16} />
           Home
         </button>

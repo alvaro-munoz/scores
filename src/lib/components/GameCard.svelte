@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { push } from 'svelte-spa-router';
   import { Trash2, Users, Crown } from '@lucide/svelte';
   import { db, computeTotals } from '../db';
   import { liveQueryState } from '../liveQuery.svelte';
@@ -7,9 +6,10 @@
 
   interface Props {
     game: Game;
+    onOpen: (game: Game) => void;
     onRequestDelete: (game: Game) => void;
   }
-  const { game, onRequestDelete }: Props = $props();
+  const { game, onOpen, onRequestDelete }: Props = $props();
 
   const rounds = liveQueryState(
     () => db.rounds.where('gameId').equals(game.id!).sortBy('index'),
@@ -19,7 +19,7 @@
   const leader = $derived([...totals].sort((a, b) => a.rank - b.rank)[0]);
 
   function open() {
-    push(game.status === 'finished' ? `/game/${game.id}/summary` : `/game/${game.id}`);
+    onOpen(game);
   }
 
   function formatDate(ts: number) {
