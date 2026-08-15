@@ -16,8 +16,9 @@ rather than parsing a route param. When adding a new screen, wire it into
 `App.svelte`'s view union and pass it callbacks the same way — don't reach
 for a router.
 
-One consequence: there's no browser history, so the in-app back arrow in the
-header always goes to `home`, not to "the previous screen".
+One consequence: there's no browser history, so the header's non-home button
+is a Home button (`House` icon, goes straight to `goHome`) rather than a back
+arrow — there's no "previous screen" concept for it to step back to.
 
 ## Data layer (`src/lib/db.ts`, `src/lib/types.ts`)
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowLeft, Spade } from '@lucide/svelte';
+  import { House, Spade } from '@lucide/svelte';
   import { Toast } from '@skeletonlabs/skeleton-svelte';
   import { toaster } from './lib/toaster';
   import { pwa } from './lib/pwa.svelte';
@@ -52,13 +52,8 @@
     style="padding-top: max(0.75rem, env(safe-area-inset-top));"
   >
     {#if !isHome}
-      <button
-        type="button"
-        class="btn-icon preset-tonal"
-        aria-label="Back to games"
-        onclick={goHome}
-      >
-        <ArrowLeft size={20} />
+      <button type="button" class="btn-icon preset-tonal" aria-label="Home" onclick={goHome}>
+        <House size={20} />
       </button>
     {:else}
       <Spade size={22} class="text-primary-500" />
